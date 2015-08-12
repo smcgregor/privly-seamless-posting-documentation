@@ -6,13 +6,13 @@ This documentation is supposed to explain the architecture and the implementatio
 
 ## What's Seamless-Posting
 
-The new feature that enables users to directly publish Privly message in the host page safely and seamlessly, just as the reading process.
+Seamless posting is a method that puts the extension's posting form element directly over the form element of the host page. It is 'Seamless' because the user does not need to leave a web app in order to post encrypted content to it.
 
 ## What is the work flow of Seamless-Posting
 
-In seamless-posting, we first create a new Privly link, then repeatly update it while user is inputting. If the user clicks cancel, the Privly link will be destroyed.
+In seamless-posting, we first create a new Privly link and place it in the host page's form element. While the user types content into the protected form element, the content associated with the link continually updates. If the user clicks the cancel button, the content associated with the Privly link will be destroyed and the link will be removed from the host page's form element.
 
-## Privly-Chrome and Privly-Application both contain codes related to seamless-posting, what are their roles?
+## What are the roles of Privly-App and Privly-Extension?
 
 ### Privly-Application
 
@@ -24,22 +24,22 @@ Seamless-posting implements the following parts:
    > 
    > view adapter: `privly-application/shared/javascripts/viewAdapters/seamless.js`
   
-   This is the view layer. It will be loaded into an iframe (to ensure safety) and put inside the host page if user enables seamless-posting for an editable element. Users will write secure messages in this page, which is embedded in the host page.
+   This is the view layer. It will be loaded into an iframe (to ensure safety) and put inside the host page. Users will write secure messages in this iframe that sits directly over the form of the host page.
 
-   In default, the template provides a textarea which has green background color. When user is inputting in the textarea, view adapter will call network interfaces to update the link.
+   The default template provides a textarea with a green background color. The view adapter calls the network interfaces to update the link as the user types into the text area.
    
-   This is named as prototype view, because it is a base template, which is supposed to be extended/inherited in the specific Privly Application.
+   This is a "prototype view" because it is a base template that can be extended/inherited in the specific Privly Application.
 
 2. Seamless-posting TTLSelect view and view adapter
 
    > prototype view: `privly-application/templates/seamless_ttlselect.html.template`
    > view adapter: `privly-application/shared/javascripts/viewAdapters/seamless_ttlselect.js`
 
-   This will be loaded into an iframe and put inside the host page if user hovers on the Privly button after enabling seamless-posting. This view layer provides menu-style UI for user to change the seconds_until_burn(TTL) option.
+   This view layer provides menu-style UI for user to change the seconds_until_burn(TTL) option. This will be loaded into an iframe above the seamless-posting form if the user hovers over the Privly button.
 
 3. Seamless-posting feature for Message and PlainPost application
 
-   Message and PlainPost application has already implemented the seamless-posting (and seamless-posting TTLSelect) view.
+   Privly-Apps implement the seamless-posting and seamless-posting TTLSelect views.
    
    > Message App:
    > 
@@ -53,13 +53,13 @@ Seamless-posting implements the following parts:
    > 
    > controller: `privly-application/PlainPost/js/controller/seamless.js`
 
-   See `privly-application/Message/js/controllers/seamless.js` for samples of hooking the creation process and deletion process of seamless-posting, to store and remove the encryption key of Message app in such processes.
+   See `privly-application/Message/js/controllers/seamless.js` for samples of hooking an app into the seamless form.
 
-   See `privly-application/Message/js/messageModel.js` for samples of manipulating created Privly link to append the encryption key, and providing own encrypted `structured_content`.
+   See `privly-application/Message/js/messageModel.js` for samples of manipulating Privly links.
 
-### Privly-Chrome
+### Privly-Extension (Privly-Chrome)
 
-Seamless-posting implements the following parts:
+To support seamless-posting, the extension includes the following content scripts:
 
 1. Seamless-posting contentscript
    
@@ -67,17 +67,17 @@ Seamless-posting implements the following parts:
    > 
    > `javascripts/content_scripts/posting.*.js`
    > 
-   > The content script is splitted into several files for better readibility.
+   > The content script is split into several files for better readability.
    
-   The content script mainly:
-   - Creates a Privly button at the top-right corner when user focus on an editable element in the host page (`posting.button.js`).
+   The content scripts:
+   - Create a Privly button at the top-right corner when user focus on an editable element in the host page (`posting.button.js`).
    - Provides tooltip (`Clicks to enable Privly posting`) when user hovers on the button (`posting.tooltip.js`)
    - Creates the iframe of privly-application seamless-posting view (`app`) when user clicks the button (`posting.app.js`)
    - Inserts Privly link into the original editable element (`target`) after the view in iframe creates a Privly link (`posting.target.js`)
    - Provides a dropdown menu (`TTLSelect`) when user hovers on the button after enabling seamless-posting (`posting.ttlselect.js`)
-   - Destroys the iframe if user clicks button again (`posting.app.js`)
+   - Destroys the iframe if user clicks the button again (`posting.app.js`)
    
-   Notice that most of the feature above involve more than one content script file. See implementation section below for details.
+   Notice that most of the features above involve more than one content script file. See implementation section below for details.
 
 2. Seamless-posting background script
    
@@ -91,13 +91,13 @@ Seamless-posting implements the following parts:
    
    The background script:
    - Creates a bridge for communicating between the content script and the Privly application (for example, which link to insert) (`posting_process.js`)
-   - Pops up login dialog if the user is not logined (`posting_process.js`)
-   - Creates context menu for user to select the desired App and enable seamless-posting (`context_menu.js`)
-   - Update the icon of the action_button (`modal_button`) according to the status  of whether user is writing in a seamless-posting form (`modal_button.js`)
+   - Pops up login dialog if the user is not logged in (`posting_process.js`)
+   - Creates context menu for the user to select the desired App and enable seamless-posting (`context_menu.js`)
+   - Update the icon of the action_button (`modal_button`) according to the scripting context that can capture keyboard inputs (`modal_button.js`)
 
-## Implementation of Privly-Application
+## Integrating Seamless-Posting with Privly-Applications
 
-> ECMAScript 6 Promise is heavily used to arrange the async callback order.
+> ECMAScript 6 Promise is heavily used to arrange the asynchronous callback order.
 
 ### Seamless-Posting View Adapter
 
@@ -119,7 +119,7 @@ Seamless-posting implements the following parts:
 
   1. If contains: try to load it (`loadLink`).
 
-    1. If loaded succeeded and the link is a valid Privly link and the user has edit permission: Use the content of the Privly link as the initial content of the posting form (`initial content = (content of target).replace(the privly link, the content of the privly link)`), Goto 9.
+    1. If loading succeeded and the link is a valid Privly link and the user has edit permission: Use the content of the Privly link as the initial content of the posting form (`initial content = (content of target).replace(the privly link, the content of the privly link)`), Goto 9.
 
     2. Else: Goto 6.
 
@@ -142,7 +142,7 @@ Seamless-posting implements the following parts:
 
 #### Destroy process:
 
-1. *(Privly-Chrome trying to destroy the iframe)*
+*(Privly-Chrome tries to destroy the iframe)*
 
 2. *(Privly-Chrome send message to the iframe that it is going to be destroyed)*
 
@@ -186,9 +186,9 @@ Seamless-posting implements the following parts:
 
 1. Update link (`updateLink`)
 
-2. If it is keypress enter: send message to content script to simulate keypress enter event on the editable element (`target`) (`msgEmitEnterEvent`)
+2. If the pressed key is `enter`: send message to content script to simulate the `enter` key on the editable element (`target`) (`msgEmitEnterEvent`)
 
-> Sending message to content script is achived by sending message to background script and background script forwarding message to the content script.
+> Sending message to content script is achieved by sending message to background script and background script forwarding message to the content script.
 
 ### Seamless-Posting TTLSelect View Adapter
 
@@ -204,7 +204,7 @@ Seamless-posting implements the following parts:
 
 5. *(Privly-Chrome send message to iframe to notify whether it is below the button or above the button)*
 
-6. Generate menu DOM according to position: smaller options are always closer to the mousr-pointer.
+6. Generate menu DOM according to position: smaller options are always closer to the mouse-pointer.
 
 7. *(Privly-Chrome fade in the iframe)*
 
@@ -212,7 +212,7 @@ Seamless-posting implements the following parts:
 
 1. Send message to content script to notify that user has clicked an option (`msgTTLChange`)
 
-> Sending message to content script is achived by sending message to background script and background script forwarding message to the content script.
+> Sending message to content script is achieved by sending a message to the background script and background script forwarding message to the content script.
 
 ## Implementation of Privly-Chrome
 
@@ -220,23 +220,23 @@ Seamless-posting implements the following parts:
 
 #### Resource, ResourceItem
 
-We have to manage state for editable elements on the page (for example, whether it is in seamless-posting mode). We also need to manage state for programmly-created elements (for example, a Privly button may be spinner icon, or lock button, or cancel button, based on state). Besides, we also need to manage some global objects (for example, a Privly button may contain a timer to postpone the hiding process). In addition, those stuff should be treated together: when editable element is removed, our state data should be cleared, our Privly button DOM related to that editable element should be removed and our Privly button timer should be canceled.
+We have to manage state for editable elements on the page (for example, whether it is in seamless-posting mode). We also need to manage state for programmatically-created elements (for example, a Privly button may be spinner icon, or lock button, or cancel button, based on state). Besides, we also need to manage some global objects (for example, a Privly button may contain a timer to postpone the hiding process). In addition, those stuff should be treated together: when editable element is removed, our state data should be cleared, our Privly button DOM related to that editable element should be removed and our Privly button timer should be canceled.
 
 Thus we created the `Resource` class (implemented in `posting.resource.js`), to provide a container for those components (`ResourceItem`, implemented in `posting.resource.js`), for a specific editable element.
 
 Features:
 
-- Different editable element is linked to different `Resource`s.
+- Different editable elements are linked to different `Resource`s.
 
 - A `Resource` can hold many different `ResourceItem`s.
 
 - A Privly button DOM is managed by a `ResourceItem` (implemented in `posting.button.js`), an editable element DOM itself is managed by a `ResourceItem` (implemented in `posting.target.js`), a Privly button tooltip DOM is managed by a `ResourceItem` (implemented in `posting.tooltip.js`), a Privly seamless-posting Application iframe DOM is managed by a `ResourceItem` (implemented in `posting.app.js`), etc.
 
-- There is a global pool of `Resource` (managing all `Resource` instance).
+- There is a global pool of `Resource`s (managing all `Resource` instance).
 
-- `ResourceItem` has `destroy` method, which is a kind of destructor.
+- `ResourceItem` has a `destroy` method, which is a kind of destructor.
 
-- Different `ResourceItem` can have different destructor behaviours, for example, for a Privly button Resource Item, when it is destroyed, the DOM should be removed from DOM tree. However for a Target Resource Item, when it is destroyed, the DOM (the editable element itself) should not be removed from DOM tree. Notice that, Privly button Resource Item also cancels its timers inside `destroy`.
+- Different `ResourceItem` can have different destructor behaviors, for example, for a Privly button Resource Item, when it is destroyed, the DOM should be removed from DOM tree. However for a Target Resource Item, when it is destroyed, the DOM (the editable element itself) should not be removed from DOM tree. Notice that, Privly button Resource Item also cancels its timers inside `destroy`.
 
 - Some `ResourceItem` may not contain DOM nodes, for example, `posting.controller.js` implements a `ResourceItem` which only control other `ResourceItem`s.
 
@@ -252,7 +252,7 @@ Features:
 
 - A message received by `Resource` can be external -- Chrome message from background script,  or internal -- by calling `broadcastInternal()`.
 
-- Messages send from `broadcastInternal` does not support `sendResponse`.
+- Messages sent from `broadcastInternal` do not support `sendResponse`.
 
 - A `ResourceItem` can subscribe different kind of message (differentiate by `action` property) by calling `addMessageListener`.
 
@@ -260,13 +260,13 @@ Features:
 
 - The background script will forward Chrome messages of which `action` start with `posting/app` to all Privly applications (each Privly applications will filter messages).
 
-- The background script will forward Chrome messages of which `action` start with `posting/contentScript` to all content scripts (each `Resource` will filter messages as metioned above).
+- The background script will forward Chrome messages of which `action` start with `posting/contentScript` to all content scripts (each `Resource` will filter messages as mentioned above).
 
 - The background script itself will try to handle Chrome messages of which `action` start with `posting/background`.
 
 #### Resource State
 
-A `Resource` have a `state` property, indicates whether it is in the seamless-posting mode.
+A `Resource` has a `state` property that indicates whether it is in the seamless-posting mode.
 
 `state == OPEN`: In seamless-posting mode (posting form is open).
 
@@ -282,7 +282,7 @@ Button also has two properties indicates its state:
 
 `state`: the same to Resource State.
 
-We saparated the two properties thus each `ResourceItem` can set one of them without caring about affecting real states.
+We separated the two properties thus each `ResourceItem` can set one of them without caring about affecting real states.
 
 - For `loading == true`: internal state is `LOADING`, The button will show `spinner` icon.
 
@@ -290,7 +290,7 @@ We saparated the two properties thus each `ResourceItem` can set one of them wit
 
 - For `loading == false` and `state == OPEN`: internal state is `OPEN`, the button will show `cancel` button.
 
-`INTERNAL_STATE_PROPERTY` defines behaviours of the button in each internal state:
+`INTERNAL_STATE_PROPERTY` defines behaviors of the button in each internal state:
 
 ```js
 var INTERNAL_STATE_PROPERTY = {
@@ -369,11 +369,11 @@ The process of showing the Privly button:
 
 #### When `posting.tooltip.js` constructs `TooltipResourceItem`
 
-1. Create DOM for the tooltip (see `posting.floating.js` for underlayer implementation)
+1. Create DOM for the tooltip (see `posting.floating.js` for underlying implementation)
 
 #### When `posting.ttlselect.js` constructs `TTLSelectResourceItem`
 
-1. Create DOM for the TTLSelect (see `posting.floating.js` for underlayer implementation)
+1. Create DOM for the TTLSelect (see `posting.floating.js` for underlying implementation)
 
 #### When `posting.target.js` receives `internal/targetActivated`
 
