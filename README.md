@@ -21,6 +21,7 @@ Seamless-posting implements the following parts:
 1. Seamless-posting template (called prototype view) and related JavaScript (called view adapter)
    
    > prototype view: `privly-application/templates/seamless.html.template`
+   > 
    > view adapter: `privly-application/shared/javascripts/viewAdapters/seamless.js`
   
    This is the view layer. It will be loaded into an iframe (to ensure safety) and put inside the host page if user enables seamless-posting for an editable element. Users will write secure messages in this page, which is embedded in the host page.
@@ -41,11 +42,15 @@ Seamless-posting implements the following parts:
    Message and PlainPost application has already implemented the seamless-posting (and seamless-posting TTLSelect) view.
    
    > Message App:
+   > 
    > view: `privly-application/Message/seamless.html.subtemplate`
+   > 
    > controller: `privly-application/Message/js/controller/seamless.js`
    > 
    > PlainPost App:
+   > 
    > view: `privly-application/PlainPost/seamless.html.subtemplate`
+   > 
    > controller: `privly-application/PlainPost/js/controller/seamless.js`
 
    See `privly-application/Message/js/controllers/seamless.js` for samples of hooking the creation process and deletion process of seamless-posting, to store and remove the encryption key of Message app in such processes.
@@ -59,7 +64,9 @@ Seamless-posting implements the following parts:
 1. Seamless-posting contentscript
    
    > Content script:
+   > 
    > `javascripts/content_scripts/posting.*.js`
+   > 
    > The content script is splitted into several files for better readibility.
    
    The content script mainly:
@@ -75,8 +82,11 @@ Seamless-posting implements the following parts:
 2. Seamless-posting background script
    
    > Background script:
+   > 
    > `javascripts/background_scripts/posting_process.js`
+   > 
    > `javascripts/background_scripts/context_menu.js`
+   > 
    > `javascripts/background_scripts/modal_button.js`
    
    The background script:
@@ -178,7 +188,7 @@ Seamless-posting implements the following parts:
 
 2. If it is keypress enter: send message to content script to simulate keypress enter event on the editable element (`target`) (`msgEmitEnterEvent`)
 
-> PS: Sending message to content script is achived by sending message to background script and background script forwarding message to the content script.
+> Sending message to content script is achived by sending message to background script and background script forwarding message to the content script.
 
 ### Seamless-Posting TTLSelect View Adapter
 
@@ -202,7 +212,7 @@ Seamless-posting implements the following parts:
 
 1. Send message to content script to notify that user has clicked an option (`msgTTLChange`)
 
-> PS: Sending message to content script is achived by sending message to background script and background script forwarding message to the content script.
+> Sending message to content script is achived by sending message to background script and background script forwarding message to the content script.
 
 ## Implementation of Privly-Chrome
 
